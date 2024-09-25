@@ -1,0 +1,13 @@
+id_usuario,nome,idade_conta,atividade_media
+1,Alice,30,50
+2,Bob,5,1500
+3,Carol,60,20
+4,Rafa,5,2
+5,Carlos,5,1000
+
+Matriz de Adjacência:
+0 5 0 0 0
+2 0 10 0 0
+0 0 0 0 0
+0 0 0 0 0
+100 0 0 0 0
