@@ -1,5 +1,7 @@
 import numpy as np
 import json
+import networkx as nx
+import matplotlib.pyplot as plt
 
 class Usuario:
     def __init__(self, id_usuario, nome, idade_conta, atividade_media):
@@ -42,6 +44,8 @@ class GrafoRedeSocial:
         self.matriz_adj = np.array([[]])
         self.is_digrafo = True
         self.is_ponderado = True
+        self.id_to_index = {}
+        self.index_to_id = []
 
     def carregar_grafo(self, arquivo):
         try:
@@ -49,6 +53,8 @@ class GrafoRedeSocial:
                 data = json.load(f)
             self.usuarios = {int(k): Usuario.from_dict(v) for k, v in data['usuarios'].items()}
             self.matriz_adj = np.array(data['matriz_adj'])
+            self.id_to_index = {int(k): v for k, v in data['id_to_index'].items()}
+            self.index_to_id = [int(id_) for id_ in data['index_to_id']]
         except Exception as e:
             print(f"Erro ao carregar o grafo: {e}")
             raise e 
@@ -57,7 +63,9 @@ class GrafoRedeSocial:
         try:
             data = {
                 'usuarios': {k: v.to_dict() for k, v in self.usuarios.items()},
-                'matriz_adj': self.matriz_adj.tolist()
+                'matriz_adj': self.matriz_adj.tolist(),
+                'id_to_index': self.id_to_index,
+                'index_to_id': self.index_to_id
             }
             with open(arquivo, 'w') as f:
                 json.dump(data, f, indent=4)
@@ -83,7 +91,9 @@ class GrafoRedeSocial:
             self.atualizar_usuario(usuario.id_usuario, nome=usuario.nome, idade_conta=usuario.idade_conta, atividade_media=usuario.atividade_media)
         else:
             self.usuarios[usuario.id_usuario] = usuario
-            tamanho = len(self.usuarios)
+            self.index_to_id.append(usuario.id_usuario)
+            self.id_to_index[usuario.id_usuario] = len(self.index_to_id) - 1
+            tamanho = len(self.index_to_id)
             if self.matriz_adj.size == 0:
                 self.matriz_adj = np.zeros((1,1))
             else:
@@ -93,25 +103,31 @@ class GrafoRedeSocial:
 
     def remover_usuario(self, id_usuario):
         if id_usuario in self.usuarios:
-            indice = list(self.usuarios.keys()).index(id_usuario)
+            indice = self.id_to_index[id_usuario]
             self.matriz_adj = np.delete(self.matriz_adj, indice, axis=0)
             self.matriz_adj = np.delete(self.matriz_adj, indice, axis=1)
             del self.usuarios[id_usuario]
+            del self.id_to_index[id_usuario]
+            self.index_to_id.pop(indice)
+            # Atualizar índices dos usuários seguintes
+            for idx in range(indice, len(self.index_to_id)):
+                user_id = self.index_to_id[idx]
+                self.id_to_index[user_id] = idx
         else:
             print("Usuário não encontrado.")
 
     def adicionar_aresta(self, id_origem, id_destino, peso=1):
         if id_origem in self.usuarios and id_destino in self.usuarios:
-            indice_origem = list(self.usuarios.keys()).index(id_origem)
-            indice_destino = list(self.usuarios.keys()).index(id_destino)
+            indice_origem = self.id_to_index[id_origem]
+            indice_destino = self.id_to_index[id_destino]
             self.matriz_adj[indice_origem][indice_destino] = peso
         else:
             print("Um dos usuários não existe.")
 
     def remover_aresta(self, id_origem, id_destino):
         if id_origem in self.usuarios and id_destino in self.usuarios:
-            indice_origem = list(self.usuarios.keys()).index(id_origem)
-            indice_destino = list(self.usuarios.keys()).index(id_destino)
+            indice_origem = self.id_to_index[id_origem]
+            indice_destino = self.id_to_index[id_destino]
             self.matriz_adj[indice_origem][indice_destino] = 0
         else:
             print("Um dos usuários não existe.")
@@ -130,8 +146,8 @@ class GrafoRedeSocial:
 
     def consultar_aresta(self, id_origem, id_destino):
         if id_origem in self.usuarios and id_destino in self.usuarios:
-            indice_origem = list(self.usuarios.keys()).index(id_origem)
-            indice_destino = list(self.usuarios.keys()).index(id_destino)
+            indice_origem = self.id_to_index[id_origem]
+            indice_destino = self.id_to_index[id_destino]
             peso = self.matriz_adj[indice_origem][indice_destino]
             if peso != 0:
                 print(f"Aresta de {id_origem} para {id_destino} com peso {peso}")
@@ -146,14 +162,14 @@ class GrafoRedeSocial:
         print("Grafo tem laços.") if np.trace(self.matriz_adj) > 0 else print("Grafo não tem laços.")
         print("Grau de cada vértice:")
         for id_usuario in self.usuarios:
-            indice = list(self.usuarios.keys()).index(id_usuario)
+            indice = self.id_to_index[id_usuario]
             grau = np.count_nonzero(self.matriz_adj[indice])
             print(f"Usuário {id_usuario} tem grau {grau}")
 
     def detectar_bots(self):
         print("Usuários suspeitos de serem bots:")
         for usuario in self.usuarios.values():
-            indice_usuario = list(self.usuarios.keys()).index(usuario.id_usuario)
+            indice_usuario = self.id_to_index[usuario.id_usuario]
             interacoes_recebidas = np.count_nonzero(self.matriz_adj[:, indice_usuario])
             condicao1 = usuario.idade_conta < 7 and usuario.atividade_media >= 500
             condicao2 = usuario.atividade_media >= 1000 and interacoes_recebidas < 10
@@ -241,7 +257,9 @@ class GrafoRedeSocial:
                 id_origem = int(input("ID do usuário de origem: "))
                 id_destino = int(input("ID do usuário de destino: "))
                 if id_origem in self.usuarios and id_destino in self.usuarios:
-                    peso_atual = self.matriz_adj[list(self.usuarios.keys()).index(id_origem)][list(self.usuarios.keys()).index(id_destino)]
+                    indice_origem = self.id_to_index[id_origem]
+                    indice_destino = self.id_to_index[id_destino]
+                    peso_atual = self.matriz_adj[indice_origem][indice_destino]
                     if peso_atual == 0:
                         print("Não existe aresta entre os usuários especificados.")
                     else:
@@ -277,7 +295,50 @@ class GrafoRedeSocial:
             else:
                 print("Opção inválida.")
 
+    def calcular_porcentagem_preenchimento(self):
+        total_vertices = len(self.usuarios)
+        total_possiveis_arestas = total_vertices * (total_vertices - 1)
+        total_arestas_existentes = np.count_nonzero(self.matriz_adj)
+        porcentagem = (total_arestas_existentes / total_possiveis_arestas) * 100
+        print(f"Porcentagem da matriz de adjacências preenchida: {porcentagem:.2f}%")
+        return porcentagem
+    
+    def gerar_imagem_grafo(self, arquivo_imagem='grafo.png'):
+        G = nx.DiGraph() if self.is_digrafo else nx.Graph()
 
+        # Adicionando os vértices
+        for usuario in self.usuarios.values():
+            G.add_node(usuario.id_usuario, label=usuario.nome)
+
+        # Adicionando as arestas com pesos
+        for i, id_origem in enumerate(self.index_to_id):
+            for j, id_destino in enumerate(self.index_to_id):
+                peso = self.matriz_adj[i][j]
+                if peso > 0:
+                    G.add_edge(id_origem, id_destino, weight=peso)
+
+        pos = nx.spring_layout(G)  # Layout do grafo
+
+        # Desenhando os nós
+        nx.draw_networkx_nodes(G, pos, node_size=500)
+
+        # Desenhando as arestas com pesos
+        edges = G.edges()
+        weights = [G[u][v]['weight'] for u, v in edges]
+        nx.draw_networkx_edges(G, pos, edgelist=edges, arrowstyle='->', arrowsize=20, width=2)
+
+        # Desenhando os rótulos dos nós
+        labels = {usuario.id_usuario: usuario.nome for usuario in self.usuarios.values()}
+        nx.draw_networkx_labels(G, pos, labels, font_size=10)
+
+        # Desenhando os pesos das arestas
+        edge_labels = nx.get_edge_attributes(G, 'weight')
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+
+        plt.axis('off')
+        plt.savefig(arquivo_imagem)
+        plt.show()
+        print(f"Imagem do grafo salva como {arquivo_imagem}.")
 
 if __name__ == "__main__":
     grafo = GrafoRedeSocial()
@@ -290,31 +351,62 @@ if __name__ == "__main__":
         grafo_existe = False
 
     if not grafo_existe:
-        usuario1 = Usuario(1, "Alice", 30, 50)
-        usuario2 = Usuario(2, "Bob", 5, 1500) 
-        usuario3 = Usuario(3, "Carol", 60, 20)
-        grafo.adicionar_usuario(usuario1)
-        grafo.adicionar_usuario(usuario2)
-        grafo.adicionar_usuario(usuario3)
+        # Adicionando 10 usuários
+        usuarios = [
+            Usuario(1, "Alice", 30, 50),
+            Usuario(2, "Bob", 5, 1500),
+            Usuario(3, "Carol", 60, 20),
+            Usuario(4, "Dave", 10, 300),
+            Usuario(5, "Eve", 15, 450),
+            Usuario(6, "Frank", 25, 600),
+            Usuario(7, "Grace", 35, 700),
+            Usuario(8, "Heidi", 45, 800),
+            Usuario(9, "Ivan", 55, 900),
+            Usuario(10, "Judy", 65, 1000)
+        ]
 
+        for usuario in usuarios:
+            grafo.adicionar_usuario(usuario)
+
+        # Adicionando arestas
         grafo.adicionar_aresta(1, 2, peso=5)
-        grafo.adicionar_aresta(2, 1, peso=2)
-        grafo.adicionar_aresta(2, 3, peso=10)
+        grafo.adicionar_aresta(2, 3, peso=3)
+        grafo.adicionar_aresta(3, 4, peso=2)
+        grafo.adicionar_aresta(4, 5, peso=4)
+        grafo.adicionar_aresta(5, 6, peso=6)
+        grafo.adicionar_aresta(6, 7, peso=1)
+        grafo.adicionar_aresta(7, 8, peso=7)
+        grafo.adicionar_aresta(8, 9, peso=8)
+        grafo.adicionar_aresta(9, 10, peso=9)
+        grafo.adicionar_aresta(10, 1, peso=10)
+        grafo.adicionar_aresta(2, 5, peso=2)
+        grafo.adicionar_aresta(3, 6, peso=3)
+        grafo.adicionar_aresta(4, 7, peso=4)
+        grafo.adicionar_aresta(5, 8, peso=5)
+        grafo.adicionar_aresta(6, 9, peso=6)
+        grafo.adicionar_aresta(7, 10, peso=7)
+        grafo.adicionar_aresta(8, 1, peso=8)
+        grafo.adicionar_aresta(9, 2, peso=9)
+        grafo.adicionar_aresta(10, 3, peso=10)
 
+        # Chamando o método para calcular a porcentagem de preenchimento
+        porcentagem = grafo.calcular_porcentagem_preenchimento()
+        if porcentagem < 20:
+            print("A porcentagem de preenchimento está abaixo de 20%. Considere adicionar mais arestas.")
+        else:
+            print("A porcentagem de preenchimento atende ao requisito mínimo de 20%.")
+
+    # O restante do seu código continua aqui...
     grafo.consultar_usuario(2)
-
     grafo.consultar_aresta(1, 2)
-
     grafo.listar_dados_grafo()
-
     grafo.detectar_bots()
-
     grafo.visualizar_grafo()
-
     grafo.gerar_relatorio()
-
     grafo.simular_alteracao()
 
-    grafo.salvar_grafo('grafo.json')
+    # Gerando a imagem do grafo
+    grafo.gerar_imagem_grafo('grafo.png')
 
+    grafo.salvar_grafo('grafo.json')
     grafo.exportar_grafo('grafo_exportado.csv')
