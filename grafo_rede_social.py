@@ -351,24 +351,22 @@ if __name__ == "__main__":
         grafo_existe = False
 
     if not grafo_existe:
-        # Adicionando 10 usuários
         usuarios = [
-            Usuario(1, "Alice", 30, 50),
-            Usuario(2, "Bob", 5, 1500),
-            Usuario(3, "Carol", 60, 20),
-            Usuario(4, "Dave", 10, 300),
-            Usuario(5, "Eve", 15, 450),
-            Usuario(6, "Frank", 25, 600),
-            Usuario(7, "Grace", 35, 700),
-            Usuario(8, "Heidi", 45, 800),
-            Usuario(9, "Ivan", 55, 900),
-            Usuario(10, "Judy", 65, 1000)
+            Usuario(1, "Ana", 30, 50),
+            Usuario(2, "Bruno", 5, 1500),
+            Usuario(3, "Carla", 60, 20),
+            Usuario(4, "Diego", 10, 300),
+            Usuario(5, "Eduarda", 15, 450),
+            Usuario(6, "Felipe", 25, 600),
+            Usuario(7, "Gabriela", 35, 700),
+            Usuario(8, "Henrique", 45, 800),
+            Usuario(9, "Isabela", 55, 900),
+            Usuario(10, "João", 65, 1000)
         ]
 
         for usuario in usuarios:
             grafo.adicionar_usuario(usuario)
 
-        # Adicionando arestas
         grafo.adicionar_aresta(1, 2, peso=5)
         grafo.adicionar_aresta(2, 3, peso=3)
         grafo.adicionar_aresta(3, 4, peso=2)

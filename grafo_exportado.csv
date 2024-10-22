@@ -1,14 +1,14 @@
 id_usuario,nome,idade_conta,atividade_media
-1,Alice,30,50
-2,Bob,5,1500
-3,Carol,60,20
-4,Dave,10,300
-5,Eve,15,450
-6,Frank,25,600
-7,Grace,35,700
-8,Heidi,45,800
-9,Ivan,55,900
-10,Judy,65,1000
+1,Ana,30,50
+2,Bruno,5,1500
+3,Carla,60,20
+4,Diego,10,300
+5,Eduarda,15,450
+6,Felipe,25,600
+7,Gabriela,35,700
+8,Henrique,45,800
+9,Isabela,55,900
+10,João,65,1000
 
 Matriz de Adjacência:
 0 5 0 0 0 0 0 0 0 0
