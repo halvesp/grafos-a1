@@ -109,7 +109,6 @@ class GrafoRedeSocial:
             del self.usuarios[id_usuario]
             del self.id_to_index[id_usuario]
             self.index_to_id.pop(indice)
-            # Atualizar índices dos usuários seguintes
             for idx in range(indice, len(self.index_to_id)):
                 user_id = self.index_to_id[idx]
                 self.id_to_index[user_id] = idx
@@ -306,32 +305,26 @@ class GrafoRedeSocial:
     def gerar_imagem_grafo(self, arquivo_imagem='grafo.png'):
         G = nx.DiGraph() if self.is_digrafo else nx.Graph()
 
-        # Adicionando os vértices
         for usuario in self.usuarios.values():
             G.add_node(usuario.id_usuario, label=usuario.nome)
 
-        # Adicionando as arestas com pesos
         for i, id_origem in enumerate(self.index_to_id):
             for j, id_destino in enumerate(self.index_to_id):
                 peso = self.matriz_adj[i][j]
                 if peso > 0:
                     G.add_edge(id_origem, id_destino, weight=peso)
 
-        pos = nx.spring_layout(G)  # Layout do grafo
+        pos = nx.spring_layout(G) 
 
-        # Desenhando os nós
         nx.draw_networkx_nodes(G, pos, node_size=500)
 
-        # Desenhando as arestas com pesos
         edges = G.edges()
         weights = [G[u][v]['weight'] for u, v in edges]
         nx.draw_networkx_edges(G, pos, edgelist=edges, arrowstyle='->', arrowsize=20, width=2)
 
-        # Desenhando os rótulos dos nós
         labels = {usuario.id_usuario: usuario.nome for usuario in self.usuarios.values()}
         nx.draw_networkx_labels(G, pos, labels, font_size=10)
 
-        # Desenhando os pesos das arestas
         edge_labels = nx.get_edge_attributes(G, 'weight')
         nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
 
@@ -387,14 +380,12 @@ if __name__ == "__main__":
         grafo.adicionar_aresta(9, 2, peso=9)
         grafo.adicionar_aresta(10, 3, peso=10)
 
-        # Chamando o método para calcular a porcentagem de preenchimento
         porcentagem = grafo.calcular_porcentagem_preenchimento()
         if porcentagem < 20:
             print("A porcentagem de preenchimento está abaixo de 20%. Considere adicionar mais arestas.")
         else:
             print("A porcentagem de preenchimento atende ao requisito mínimo de 20%.")
 
-    # O restante do seu código continua aqui...
     grafo.consultar_usuario(2)
     grafo.consultar_aresta(1, 2)
     grafo.listar_dados_grafo()
@@ -403,7 +394,6 @@ if __name__ == "__main__":
     grafo.gerar_relatorio()
     grafo.simular_alteracao()
 
-    # Gerando a imagem do grafo
     grafo.gerar_imagem_grafo('grafo.png')
 
     grafo.salvar_grafo('grafo.json')
